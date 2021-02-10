@@ -13,7 +13,7 @@ import { promisify } from 'util';
 
 import { constants } from './constants';
 import { fsWrapper } from './fs_wrapper';
-import { BinaryPaths, CompilationError } from './types';
+import { CompilationError, SolcJSVersionList } from './types';
 
 /**
  * Gets contract data or returns if an artifact does not exist.
@@ -119,27 +119,27 @@ export function parseDependencies(contractSource: ContractSource): string[] {
     return dependencies;
 }
 
-let solcJSReleasesCache: BinaryPaths | undefined;
+let solcJSVersionListCache: SolcJSVersionList | undefined;
 
 /**
  * Fetches the list of available solidity compilers
  * @param isOfflineMode Offline mode flag
  */
-export async function getSolcJSReleasesAsync(isOfflineMode: boolean): Promise<BinaryPaths> {
+export async function getSolcJSVersionListAsync(isOfflineMode: boolean): Promise<SolcJSVersionList> {
     if (isOfflineMode) {
-        return constants.SOLC_BIN_PATHS;
+        return constants.SOLC_VERSION_LIST;
     }
-    if (solcJSReleasesCache === undefined) {
+    if (solcJSVersionListCache === undefined) {
         // See if we cached it on-disk first.
         try {
-            const st = await fsWrapper.statAsync(constants.SOLCJS_RELEASES_PATH);
-            if (Date.now() - st.ctime.getTime() >= constants.SOLCJS_RELEASES_CACHE_EXPIRY) {
+            const st = await fsWrapper.statAsync(constants.SOLCJS_VERSION_LIST_PATH);
+            if (Date.now() - st.ctime.getTime() >= constants.SOLCJS_VERSION_LIST_CACHE_EXPIRY) {
                 // Remove the cached file and ignore it if it's too old.
-                await fsWrapper.removeFileAsync(constants.SOLCJS_RELEASES_PATH);
+                await fsWrapper.removeFileAsync(constants.SOLCJS_VERSION_LIST_PATH);
             } else {
                 // Use the cached file otherwise.
-                return (solcJSReleasesCache = JSON.parse(
-                    await fsWrapper.readFileAsync(constants.SOLCJS_RELEASES_PATH),
+                return (solcJSVersionListCache = JSON.parse(
+                    await fsWrapper.readFileAsync(constants.SOLCJS_VERSION_LIST_PATH),
                 ));
             }
         } catch (err) {
@@ -149,12 +149,12 @@ export async function getSolcJSReleasesAsync(isOfflineMode: boolean): Promise<Bi
         }
         // Fetch from the WWW.
         const versionList = await fetch('https://solc-bin.ethereum.org/bin/list.json');
-        const versionListJSON = await versionList.json();
-        solcJSReleasesCache = versionListJSON.releases as BinaryPaths;
+        const versionListJSON: SolcJSVersionList = await versionList.json();
         // Cache the result on disk.
-        await fsWrapper.writeFileAsync(constants.SOLCJS_RELEASES_PATH, JSON.stringify(solcJSReleasesCache, null, '\t'));
+        await fsWrapper.writeFileAsync(constants.SOLCJS_VERSION_LIST_PATH, JSON.stringify(versionListJSON, null, '\t'));
+        solcJSVersionListCache = versionListJSON;
     }
-    return solcJSReleasesCache;
+    return solcJSVersionListCache;
 }
 
 /**
@@ -394,7 +394,7 @@ function recursivelyGatherDependencySources(
 }
 
 const solcJSCache: { [maxSatisfying: string]: solc.SolcInstance } = {};
-let solcJSReleases: BinaryPaths | undefined;
+let solcJSVersionList: SolcJSVersionList | undefined;
 
 /**
  * Calls `getSolcJSAsync()` for every solc version passed in.
@@ -413,10 +413,10 @@ export async function preFetchCSolcJSBinariesAsync(solcVersions: string[]): Prom
  * @param isOfflineMode Offline mode flag
  */
 export async function getSolcJSAsync(solidityVersion: string, isOfflineMode: boolean): Promise<solc.SolcInstance> {
-    if (!solcJSReleases) {
-        solcJSReleases = await getSolcJSReleasesAsync(isOfflineMode);
+    if (!solcJSVersionList) {
+        solcJSVersionList = await getSolcJSVersionListAsync(isOfflineMode);
     }
-    const fullSolcVersion = solcJSReleases[solidityVersion];
+    const fullSolcVersion = solcJSVersionList.releases[solidityVersion];
     if (fullSolcVersion === undefined) {
         throw new Error(`${solidityVersion} is not a known compiler version`);
     }

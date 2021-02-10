@@ -13,8 +13,21 @@ export interface ContractSourceData {
     [contractName: string]: ContractSpecificSourceData;
 }
 
-export interface BinaryPaths {
-    [key: string]: string;
+export type SolcJSReleases = Record<string, string>;
+
+export interface SolcJSBuild {
+    path: string;
+    version: string;
+    build: string;
+    longVersion: string;
+    keccak256: string;
+    urls: string[];
+}
+
+export interface SolcJSVersionList {
+    builds: SolcJSBuild[];
+    releases: SolcJSReleases;
+    latestRelease: string;
 }
 
 export interface ContractSpecificSourceData {

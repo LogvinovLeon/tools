@@ -27,8 +27,8 @@ import {
     createDirIfDoesNotExistAsync,
     getContractArtifactIfExistsAsync,
     getDependencyNameToPackagePath,
-    getSolcJSReleasesAsync,
     getSolcJSVersionFromPath,
+    getSolcJSVersionListAsync,
     getSourcesWithDependencies,
     getSourceTreeHash,
     normalizeSolcVersion,
@@ -105,7 +105,7 @@ export class Compiler {
         overrides: Partial<CompilerOptions> = {},
         file: string = 'compiler.json',
     ): Promise<CompilerOptions> {
-        const fileConfig: CompilerOptions = (await promisify(fs.stat)(file)).isFile()
+        const fileConfig: CompilerOptions = fs.existsSync(file)
             ? JSON.parse((await promisify(fs.readFile)(file, 'utf8')).toString())
             : {};
         assert.doesConformToSchema('compiler.json', fileConfig, compilerOptionsSchema);
@@ -270,7 +270,7 @@ export class Compiler {
         // map contract paths to data about them for later verification and persistence
         const contractPathToData: ContractPathToData = {};
 
-        const solcJSReleases = await getSolcJSReleasesAsync(this._isOfflineMode);
+        const solcJSVersionList = await getSolcJSVersionListAsync(this._isOfflineMode);
         const resolvedContractSources: ContractSource[] = [];
         for (const contractName of contractNames) {
             const spyResolver = new SpyResolver(this._resolver);
@@ -290,11 +290,11 @@ export class Compiler {
                 solcVersion = this._solcVersionIfExists;
             } else {
                 const solidityVersion = semver.maxSatisfying(
-                    _.keys(solcJSReleases),
+                    _.keys(solcJSVersionList.releases),
                     parseSolidityVersionRange(contractSource.source),
                 );
                 if (solidityVersion) {
-                    solcVersion = normalizeSolcVersion(solcJSReleases[solidityVersion]);
+                    solcVersion = normalizeSolcVersion(solcJSVersionList.releases[solidityVersion]);
                 }
             }
             if (solcVersion === undefined) {
