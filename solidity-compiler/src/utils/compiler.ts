@@ -10,6 +10,7 @@ import * as requireFromString from 'require-from-string';
 import * as solc from 'solc';
 import * as stripComments from 'strip-comments';
 import { promisify } from 'util';
+import { commit, nightly, semVer } from '../schemas/compiler_options_schema';
 
 import { constants } from './constants';
 import { fsWrapper } from './fs_wrapper';
@@ -416,9 +417,13 @@ export async function getSolcJSAsync(solidityVersion: string, isOfflineMode: boo
     if (!solcJSVersionList) {
         solcJSVersionList = await getSolcJSVersionListAsync(isOfflineMode);
     }
-    const fullSolcVersion = solcJSVersionList.releases[solidityVersion];
+    let fullSolcVersion = solcJSVersionList.releases[solidityVersion];
     if (fullSolcVersion === undefined) {
-        throw new Error(`${solidityVersion} is not a known compiler version`);
+        const nightlyBuild = solcJSVersionList.builds.find(build => build.longVersion.startsWith(solidityVersion));
+        if (nightlyBuild === undefined) {
+            throw new Error(`${solidityVersion} is not a known compiler version`);
+        }
+        fullSolcVersion = nightlyBuild.path;
     }
     if (solcJSCache[fullSolcVersion]) {
         return solcJSCache[fullSolcVersion];
@@ -517,7 +522,7 @@ export function getDependencyNameToPackagePath(
  * Extract the solidity version (e.g., '0.5.9') from a solc version (e.g., `0.5.9+commit.34d3134f`).
  */
 export function getSolidityVersionFromSolcVersion(solcVersion: string): string {
-    const m = /(\d+\.\d+\.\d+)\+commit\.[a-fA-F0-9]{8}/.exec(solcVersion);
+    const m = RegExp(`(${semVer}${nightly})${commit}`).exec(solcVersion);
     if (!m) {
         throw new Error(`Unable to parse solc version string "${solcVersion}"`);
     }
@@ -528,7 +533,7 @@ export function getSolidityVersionFromSolcVersion(solcVersion: string): string {
  * Strips any extra characters before and after the version + commit hash of a solc version string.
  */
 export function normalizeSolcVersion(fullSolcVersion: string): string {
-    const m = /\d+\.\d+\.\d+\+commit\.[a-fA-F0-9]{8}/.exec(fullSolcVersion);
+    const m = RegExp(`(${semVer}${nightly})${commit}`).exec(fullSolcVersion);
     if (!m) {
         throw new Error(`Unable to parse solc version string "${fullSolcVersion}"`);
     }
