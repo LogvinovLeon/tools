@@ -28,7 +28,9 @@ export class SolcWrapperV06 extends SolcWrapperV05 {
         // Filter out 'receive' ABI item types until ethers supports it.
         for (const contracts of Object.values(_output.contracts)) {
             for (const contract of Object.values(contracts)) {
-                contract.abi = contract.abi.filter(v => v.type !== 'receive');
+                if (contract.abi !== undefined) {
+                    contract.abi = contract.abi.filter(v => v.type !== 'receive');
+                }
             }
         }
         return _output;

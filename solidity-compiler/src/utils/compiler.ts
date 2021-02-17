@@ -10,6 +10,7 @@ import * as requireFromString from 'require-from-string';
 import * as solc from 'solc';
 import * as stripComments from 'strip-comments';
 import { promisify } from 'util';
+
 import { commit, nightly, semVer } from '../schemas/compiler_options_schema';
 
 import { constants } from './constants';
