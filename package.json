@@ -46,7 +46,6 @@
     },
     "config": {
         "mnemonic": "concert load couple harbor equip island argue ramp clarify fence smart topic",
-        "packagesWithDocPages": "@0x/json-schemas @0x/subproviders @0x/web3-wrapper @0x/sol-compiler @0x/sol-coverage @0x/sol-profiler @0x/sol-trace @0x/dev-utils",
         "ignoreDependencyVersions": "@types/styled-components @types/node"
     },
     "devDependencies": {
