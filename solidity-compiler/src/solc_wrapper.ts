@@ -32,4 +32,9 @@ export abstract class SolcWrapper {
         contractsByPath: ContractContentsByPath,
         dependencies: ImportPrefixRemappings,
     ): Promise<CompilationResult>;
+
+    /**
+     * Compile from standard JSON input returning standard input and output.
+     */
+    public abstract compileJSONAsync(input: StandardInput): Promise<CompilationResult>;
 }

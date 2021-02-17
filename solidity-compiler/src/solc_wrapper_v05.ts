@@ -80,6 +80,17 @@ export class SolcWrapperV05 extends SolcWrapper {
         };
     }
 
+    public async compileJSONAsync(input: solc.StandardInput): Promise<CompilationResult> {
+        const output = await this._compileInputAsync(input);
+        if (output.errors !== undefined) {
+            printCompilationErrorsAndWarnings(output.errors);
+        }
+        return {
+            input,
+            output: this._normalizeOutput(output),
+        };
+    }
+
     protected async _compileInputAsync(input: solc.StandardInput): Promise<StandardOutput> {
         if (this._opts.useDockerisedSolc) {
             return compileDockerAsync(this.solidityVersion, input);
