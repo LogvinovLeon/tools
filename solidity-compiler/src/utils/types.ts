@@ -55,3 +55,5 @@ export class CompilationError extends Error {
         this.errorsCount = errorsCount;
     }
 }
+
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;

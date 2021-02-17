@@ -2,6 +2,7 @@ import * as path from 'path';
 
 export const constants = {
     SOLIDITY_FILE_EXTENSION: '.sol',
+    JSON_FILE_EXTENSION: '.json',
     BASE_COMPILER_URL: 'https://solc-bin.ethereum.org/bin/',
     LATEST_ARTIFACT_VERSION: '2.0.0',
     SOLC_BIN_DIR: path.join(__dirname, '..', '..', '..', 'solc_bin'),
