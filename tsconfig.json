@@ -20,7 +20,7 @@
     "include": [],
     "references": [
         { "path": "./monorepo-scripts" },
-        { "path": "./solidity-profiler" },
+        { "path": "./solidity-compiler" },
         { "path": "./solidity-resolver" },
     ]
 }

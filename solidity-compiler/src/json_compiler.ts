@@ -1,13 +1,12 @@
 import { assert } from '@0x/assert';
-import { NameResolver, Resolver, SpyResolver } from '@0x/sol-resolver';
+import { Resolver, SpyResolver } from '@0x/sol-resolver';
 import { logUtils } from '@0x/utils';
 import { CompilerOptions, ContractArtifact, ContractVersionData, StandardOutput } from 'ethereum-types';
 import * as fs from 'fs';
 import * as _ from 'lodash';
 import * as path from 'path';
-import * as pluralize from 'pluralize';
 import * as semver from 'semver';
-import { StandardContractOutput, StandardInput } from 'solc';
+import { StandardInput } from 'solc';
 import { promisify } from 'util';
 
 import { compilerOptionsSchema } from './schemas/compiler_options_schema';
@@ -21,12 +20,11 @@ import {
 } from './utils/compiler';
 import { constants } from './utils/constants';
 import { fsWrapper } from './utils/fs_wrapper';
-import { Omit } from './utils/types';
 import { utils } from './utils/utils';
 
 import { TYPE_ALL_FILES_IDENTIFIER } from './compiler';
 import { JSONNameResolver } from './resolvers/json_name_resolver';
-import { ContractContentsByPath, ImportPrefixRemappings, SolcWrapper } from './solc_wrapper';
+import { SolcWrapper } from './solc_wrapper';
 import { SolcWrapperV04 } from './solc_wrapper_v04';
 import { SolcWrapperV05 } from './solc_wrapper_v05';
 import { SolcWrapperV06 } from './solc_wrapper_v06';
@@ -36,7 +34,7 @@ import { SolcWrapperV08 } from './solc_wrapper_v08';
 export const ALL_CONTRACTS_IDENTIFIER = '*';
 export const ALL_FILES_IDENTIFIER = '*';
 
-const DEFAULT_COMPILER_OPTS: Partial<CompilerOptions> = {
+const DEFAULT_COMPILER_OPTS: CompilerOptions = {
     contractsDir: 'contracts',
     artifactsDir: 'artifacts',
     contracts: ALL_CONTRACTS_IDENTIFIER as TYPE_ALL_FILES_IDENTIFIER,
