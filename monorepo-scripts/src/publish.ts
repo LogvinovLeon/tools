@@ -69,7 +69,7 @@ async function confirmAsync(message: string): Promise<void> {
     utils.log(`Will update CHANGELOGs and publish: \n${updatedPublicPackageNames.join('\n')}\n`);
     const packageToNextVersion = await updateChangeLogsAsync(updatedPublicPackages);
 
-    const updatedPrivatePackages = _.filter(allPackagesToPublish, pkg => pkg.packageJson.private);
+    const updatedPrivatePackages = allPackagesToPublish.filter(pkg => pkg.packageJson.private);
     _.each(updatedPrivatePackages, pkg => {
         const currentVersion = pkg.packageJson.version;
         const packageName = pkg.packageJson.name;

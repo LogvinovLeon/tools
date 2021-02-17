@@ -21,7 +21,10 @@ export class DocGenerateUtils {
     /**
      *  Recursively iterate over the TypeDoc JSON object and find all type names
      */
-    private static _getAllTypeNames(node: any, typeNames: string[]): string[] {
+    private static _getAllTypeNames(
+        node: string | { name: string; kindString: string },
+        typeNames: string[],
+    ): string[] {
         if (!_.isObject(node)) {
             return typeNames;
         }
@@ -45,7 +48,11 @@ export class DocGenerateUtils {
      * Recursively iterate over the TypeDoc JSON object and find all reference names (i.e types, classNames,
      * objectLiteral names, etc...)
      */
-    private static _getAllReferenceNames(propertyName: string, node: any, referenceNames: string[]): string[] {
+    private static _getAllReferenceNames(
+        propertyName: string,
+        node: string | { name: string; type: string },
+        referenceNames: string[],
+    ): string[] {
         if (!_.isObject(node)) {
             return referenceNames;
         }
