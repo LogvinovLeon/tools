@@ -27,7 +27,7 @@
         { "path": "./ethereum-types" },
         { "path": "./json-schemas" },
         { "path": "./monorepo-scripts" },
-        { "path": "./sol-compiler" },
+        { "path": "./solidity-compiler" },
         { "path": "./sol-coverage" },
         { "path": "./sol-profiler" },
         { "path": "./sol-trace" },
