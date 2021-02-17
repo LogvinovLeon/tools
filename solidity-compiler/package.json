@@ -1,6 +1,6 @@
 {
     "name": "solidity-compiler",
-    "version": "4.6.2",
+    "version": "5.1.0",
     "engines": {
         "node": ">=6.12"
     },
