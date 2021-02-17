@@ -119,7 +119,7 @@ export class JSONCompiler {
     public async compileAsync(): Promise<void> {
         await createDirIfDoesNotExistAsync(this._artifactsDir);
         await createDirIfDoesNotExistAsync(constants.SOLC_BIN_DIR);
-        await this._compileContractsAsync(this.getContractNamesToCompile(), {
+        await this._compileContractsAsync(this.getContractFileNamesToCompile(), {
             shouldPersist: true,
             shouldCompileIndependently: this._shouldCompileIndependently,
         });
@@ -134,7 +134,7 @@ export class JSONCompiler {
      * that version.
      */
     public async getCompilerOutputsAsync(): Promise<StandardOutput[]> {
-        const promisedOutputs = await this._compileContractsAsync(this.getContractNamesToCompile(), {
+        const promisedOutputs = await this._compileContractsAsync(this.getContractFileNamesToCompile(), {
             shouldPersist: false,
             shouldCompileIndependently: false,
         });
@@ -142,17 +142,17 @@ export class JSONCompiler {
         return promisedOutputs.map(o => o[0]);
     }
 
-    public getContractNamesToCompile(): string[] {
-        let contractNamesToCompile;
+    public getContractFileNamesToCompile(): string[] {
+        let contractFileNamesToCompile;
         if (this._specifiedContracts === ALL_CONTRACTS_IDENTIFIER) {
-            const allContracts = this._nameResolver.getAll();
-            contractNamesToCompile = _.map(allContracts, contractSource =>
+            const allContractFiles = this._nameResolver.getAll();
+            contractFileNamesToCompile = _.map(allContractFiles, contractSource =>
                 path.basename(contractSource.path, constants.JSON_FILE_EXTENSION),
             );
         } else {
             return this._specifiedContracts;
         }
-        return contractNamesToCompile;
+        return contractFileNamesToCompile;
     }
 
     /**
@@ -161,7 +161,7 @@ export class JSONCompiler {
      * @return an array of compiler outputs, where each element corresponds to a different version of solc-js.
      */
     private async _compileContractsAsync(
-        contractNames: string[],
+        contractFileNames: string[],
         opts: Partial<CompileContractsOpts> = {},
     ): Promise<StandardOutput[][]> {
         const _opts = {
@@ -173,15 +173,15 @@ export class JSONCompiler {
         const contractPathToData: ContractPathToData = {};
 
         const solcJSVersionList = await getSolcJSVersionListAsync(this._isOfflineMode);
-        for (const contractName of contractNames) {
+        for (const contractFileName of contractFileNames) {
             const spyResolver = new SpyResolver(this._resolver);
-            const contractJSONSource = spyResolver.resolve(contractName);
+            const contractJSONSource = spyResolver.resolve(contractFileName);
             const standardJSONInput = JSON.parse(contractJSONSource.source);
             const sources = standardJSONInput.sources === undefined ? standardJSONInput : standardJSONInput.sources;
             const contractContentsByPath = _.mapValues(sources, (data: { content: string }) => data.content);
             const contractData = {
-                contractName: path.basename(contractName, constants.SOLIDITY_FILE_EXTENSION),
-                currentArtifactIfExists: await getContractArtifactIfExistsAsync(this._artifactsDir, contractName),
+                contractName: path.basename(contractFileName, constants.SOLIDITY_FILE_EXTENSION),
+                currentArtifactIfExists: await getContractArtifactIfExistsAsync(this._artifactsDir, contractFileName),
                 sourceTreeHashHex: '0x',
             };
             contractPathToData[contractJSONSource.path] = contractData;
@@ -203,11 +203,10 @@ export class JSONCompiler {
             const compiler = this._getSolcWrapperForVersion(solcVersion);
             logUtils.warn(`Compiling (${path.basename(contractJSONSource.path)}) with Solidity ${solcVersion}...`);
             const compilationResult = await compiler.compileAsync(contractContentsByPath, {});
+
             if (_opts.shouldPersist) {
                 await this._persistCompiledContractAsync(
-                    contractJSONSource.path,
-                    contractPathToData[contractJSONSource.path].sourceTreeHashHex,
-                    contractName,
+                    contractFileName,
                     solcVersion,
                     compilationResult.input,
                     compilationResult.output,
@@ -245,51 +244,56 @@ export class JSONCompiler {
     }
 
     private async _persistCompiledContractAsync(
-        contractPath: string,
-        sourceTreeHashHex: string,
-        contractName: string,
+        contractFileName: string,
         solcVersion: string,
         compilerInput: StandardInput,
         compilerOutput: StandardOutput,
     ): Promise<void> {
-        const compiledContract = (compilerOutput.contracts[contractPath] ||
-            compilerOutput.contracts[path.basename(contractPath)])[contractName];
-
-        const contractVersion: Partial<ContractVersionData> = {
-            compilerOutput: compiledContract,
-            sourceTreeHashHex,
-            compiler: {
-                name: 'solc',
-                version: solcVersion,
-                settings: compilerInput.settings,
-            },
-        };
-
-        const newArtifact = {
-            schemaVersion: constants.LATEST_ARTIFACT_VERSION,
-            contractName,
-            ...contractVersion,
-            chains: {},
-        };
-
-        const artifactString = utils.stringifyWithFormatting(newArtifact);
-        const currentArtifactPath = `${this._artifactsDir}/${contractName}.json`;
-        await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
-        logUtils.warn(`${contractName} artifact saved!`);
-
-        if (this._shouldSaveStandardInput) {
-            await fsWrapper.writeFileAsync(
-                `${this._artifactsDir}/${contractName}.input.json`,
-                utils.stringifyWithFormatting({
-                    ...compilerInput,
-                    // Insert solcVersion into input.
-                    settings: {
-                        ...compilerInput.settings,
-                        version: solcVersion,
-                    },
-                }),
-            );
-            logUtils.warn(`${contractName} input artifact saved!`);
+        for (const contractPath of Object.keys(compilerOutput.contracts)) {
+            const contractName = path.basename(contractPath, constants.SOLIDITY_FILE_EXTENSION);
+            const compiledContract = compilerOutput.contracts[contractPath][contractName];
+            // console.log(singleCompilerOutput);
+            const contractVersion: Partial<ContractVersionData> = {
+                compilerOutput: compiledContract,
+                compiler: {
+                    name: 'solc',
+                    version: solcVersion,
+                    settings: compilerInput.settings,
+                },
+            };
+            const newArtifact = {
+                schemaVersion: constants.LATEST_ARTIFACT_VERSION,
+                contractName,
+                ...contractVersion,
+                chains: {},
+            };
+            const artifactString = utils.stringifyWithFormatting(newArtifact);
+            const artefactName = `${contractFileName}-${contractName}`;
+            const currentArtifactPath = `${this._artifactsDir}/${artefactName}.json`;
+            await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
+            logUtils.warn(`${artefactName} artifact saved!`);
         }
+        // const compiledContract = (compilerOutput.contracts[contractPath] ||
+        //     compilerOutput.contracts[path.basename(contractPath)])[contractName];
+
+        // const artifactString = utils.stringifyWithFormatting(newArtifact);
+        // const currentArtifactPath = `${this._artifactsDir}/${contractName}.json`;
+        // await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
+        // logUtils.warn(`${contractName} artifact saved!`);
+
+        // if (this._shouldSaveStandardInput) {
+        //     await fsWrapper.writeFileAsync(
+        //         `${this._artifactsDir}/${contractName}.input.json`,
+        //         utils.stringifyWithFormatting({
+        //             ...compilerInput,
+        //             // Insert solcVersion into input.
+        //             settings: {
+        //                 ...compilerInput.settings,
+        //                 version: solcVersion,
+        //             },
+        //         }),
+        //     );
+        //     logUtils.warn(`${contractName} input artifact saved!`);
+        // }
     }
 }
