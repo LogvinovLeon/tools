@@ -189,9 +189,10 @@ export class JSONCompiler {
             if (this._solcVersionIfExists) {
                 solcVersion = this._solcVersionIfExists;
             } else {
+                const releases = _.keys(solcJSVersionList.releases);
                 const versionRanges = _.values(sources).map(({ content }) => parseSolidityVersionRange(content));
                 const versionRange = versionRanges.join(' ');
-                const solidityVersion = semver.maxSatisfying(_.keys(solcJSVersionList.releases), versionRange);
+                const solidityVersion = semver.maxSatisfying(releases, versionRange);
                 if (solidityVersion) {
                     solcVersion = normalizeSolcVersion(solcJSVersionList.releases[solidityVersion]);
                 }
@@ -252,7 +253,6 @@ export class JSONCompiler {
         for (const contractPath of Object.keys(compilerOutput.contracts)) {
             const contractName = path.basename(contractPath, constants.SOLIDITY_FILE_EXTENSION);
             const compiledContract = compilerOutput.contracts[contractPath][contractName];
-            // console.log(singleCompilerOutput);
             const contractVersion: Partial<ContractVersionData> = {
                 compilerOutput: compiledContract,
                 compiler: {
@@ -273,27 +273,5 @@ export class JSONCompiler {
             await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
             logUtils.warn(`${artefactName} artifact saved!`);
         }
-        // const compiledContract = (compilerOutput.contracts[contractPath] ||
-        //     compilerOutput.contracts[path.basename(contractPath)])[contractName];
-
-        // const artifactString = utils.stringifyWithFormatting(newArtifact);
-        // const currentArtifactPath = `${this._artifactsDir}/${contractName}.json`;
-        // await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
-        // logUtils.warn(`${contractName} artifact saved!`);
-
-        // if (this._shouldSaveStandardInput) {
-        //     await fsWrapper.writeFileAsync(
-        //         `${this._artifactsDir}/${contractName}.input.json`,
-        //         utils.stringifyWithFormatting({
-        //             ...compilerInput,
-        //             // Insert solcVersion into input.
-        //             settings: {
-        //                 ...compilerInput.settings,
-        //                 version: solcVersion,
-        //             },
-        //         }),
-        //     );
-        //     logUtils.warn(`${contractName} input artifact saved!`);
-        // }
     }
 }

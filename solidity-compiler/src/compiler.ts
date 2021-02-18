@@ -23,13 +23,11 @@ import { promisify } from 'util';
 
 import { compilerOptionsSchema } from './schemas/compiler_options_schema';
 import {
-    CompiledSources,
     createDirIfDoesNotExistAsync,
     getContractArtifactIfExistsAsync,
     getDependencyNameToPackagePath,
     getSolcJSVersionFromPath,
     getSolcJSVersionListAsync,
-    getSourcesWithDependencies,
     getSourceTreeHash,
     normalizeSolcVersion,
     parseSolidityVersionRange,
@@ -39,7 +37,7 @@ import { constants } from './utils/constants';
 import { fsWrapper } from './utils/fs_wrapper';
 import { utils } from './utils/utils';
 
-import { ContractContentsByPath, ImportPrefixRemappings, SolcWrapper } from './solc_wrapper';
+import { ContractContentsByPath, SolcWrapper } from './solc_wrapper';
 import { SolcWrapperV04 } from './solc_wrapper_v04';
 import { SolcWrapperV05 } from './solc_wrapper_v05';
 import { SolcWrapperV06 } from './solc_wrapper_v06';
@@ -379,15 +377,10 @@ export class Compiler {
                         }
                         artifactCache[contractPath] = unitSize;
                         await this._persistCompiledContractAsync(
-                            contractPath,
-                            contractPathToData[contractPath].currentArtifactIfExists,
-                            contractPathToData[contractPath].sourceTreeHashHex,
                             contractName,
                             solcVersion,
-                            contracts,
                             compilationResult.input,
                             compilationResult.output,
-                            importRemappings,
                         );
                     }
                 }
@@ -437,76 +430,34 @@ export class Compiler {
     }
 
     private async _persistCompiledContractAsync(
-        contractPath: string,
-        currentArtifactIfExists: ContractArtifact | void,
-        sourceTreeHashHex: string,
-        contractName: string,
+        contractFileName: string,
         solcVersion: string,
-        sourcesByPath: ContractContentsByPath,
         compilerInput: StandardInput,
         compilerOutput: StandardOutput,
-        importRemappings: ImportPrefixRemappings,
     ): Promise<void> {
-        const compiledContract = compilerOutput.contracts[contractPath][contractName];
-        // need to gather sourceCodes for this artifact, but compilerOutput.sources (the list of contract modules)
-        // contains listings for every contract compiled during the compiler invocation that compiled the contract
-        // to be persisted, which could include many that are irrelevant to the contract at hand.  So, gather up only
-        // the relevant sources:
-        const allSources: CompiledSources = {};
-        // tslint:disable-next-line: forin
-        for (const sourceContractPath in sourcesByPath) {
-            const content = sourcesByPath[sourceContractPath];
-            const { id, ast } = compilerOutput.sources[sourceContractPath];
-            allSources[sourceContractPath] = { id, content, ast };
-        }
-        const usedSources = getSourcesWithDependencies(contractPath, allSources, importRemappings);
-
-        const contractVersion: ContractVersionData = {
-            compilerOutput: compiledContract,
-            sourceTreeHashHex,
-            sources: usedSources,
-            sourceCodes: _.mapValues(usedSources, ({ content }) => content),
-            compiler: {
-                name: 'solc',
-                version: solcVersion,
-                settings: compilerInput.settings,
-            },
-        };
-
-        let newArtifact: ContractArtifact;
-        if (currentArtifactIfExists !== undefined) {
-            const currentArtifact = currentArtifactIfExists as ContractArtifact;
-            newArtifact = {
-                ...currentArtifact,
-                ...contractVersion,
+        for (const contractPath of Object.keys(compilerOutput.contracts)) {
+            const contractName = path.basename(contractPath, constants.SOLIDITY_FILE_EXTENSION);
+            const compiledContract = compilerOutput.contracts[contractPath][contractName];
+            // console.log(singleCompilerOutput);
+            const contractVersion: Partial<ContractVersionData> = {
+                compilerOutput: compiledContract,
+                compiler: {
+                    name: 'solc',
+                    version: solcVersion,
+                    settings: compilerInput.settings,
+                },
             };
-        } else {
-            newArtifact = {
+            const newArtifact = {
                 schemaVersion: constants.LATEST_ARTIFACT_VERSION,
                 contractName,
                 ...contractVersion,
                 chains: {},
             };
-        }
-
-        const artifactString = utils.stringifyWithFormatting(newArtifact);
-        const currentArtifactPath = `${this._artifactsDir}/${contractName}.json`;
-        await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
-        logUtils.warn(`${contractName} artifact saved!`);
-
-        if (this._shouldSaveStandardInput) {
-            await fsWrapper.writeFileAsync(
-                `${this._artifactsDir}/${contractName}.input.json`,
-                utils.stringifyWithFormatting({
-                    ...compilerInput,
-                    // Insert solcVersion into input.
-                    settings: {
-                        ...compilerInput.settings,
-                        version: solcVersion,
-                    },
-                }),
-            );
-            logUtils.warn(`${contractName} input artifact saved!`);
+            const artifactString = utils.stringifyWithFormatting(newArtifact);
+            const artefactName = `${contractFileName}-${contractName}`;
+            const currentArtifactPath = `${this._artifactsDir}/${artefactName}.json`;
+            await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
+            logUtils.warn(`${artefactName} artifact saved!`);
         }
     }
 }
