@@ -169,7 +169,7 @@ export async function compileSolcJSAsync(
     solcInstance: solc.SolcInstance,
     standardInput: solc.StandardInput,
 ): Promise<solc.StandardOutput> {
-    const standardInputStr = JSON.stringify(standardInput);
+    const standardInputStr = JSON.stringify(standardInput, null, 2);
     const standardOutputStr = solcInstance.compileStandardWrapper(standardInputStr);
     const compiled: solc.StandardOutput = JSON.parse(standardOutputStr);
     return compiled;

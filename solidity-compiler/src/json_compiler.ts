@@ -25,6 +25,9 @@ import { utils } from './utils/utils';
 import { TYPE_ALL_FILES_IDENTIFIER } from './compiler';
 import { JSONNameResolver } from './resolvers/json_name_resolver';
 import { SolcWrapper } from './solc_wrapper';
+import { SolcWrapperV01 } from './solc_wrapper_v01';
+import { SolcWrapperV02 } from './solc_wrapper_v02';
+import { SolcWrapperV03 } from './solc_wrapper_v03';
 import { SolcWrapperV04 } from './solc_wrapper_v04';
 import { SolcWrapperV05 } from './solc_wrapper_v05';
 import { SolcWrapperV06 } from './solc_wrapper_v06';
@@ -226,6 +229,15 @@ export class JSONCompiler {
     }
 
     private _createSolcInstance(solcVersion: string): SolcWrapper {
+        if (solcVersion.startsWith('0.1.')) {
+            return new SolcWrapperV01(solcVersion, this._opts);
+        }
+        if (solcVersion.startsWith('0.2.')) {
+            return new SolcWrapperV02(solcVersion, this._opts);
+        }
+        if (solcVersion.startsWith('0.3.')) {
+            return new SolcWrapperV03(solcVersion, this._opts);
+        }
         if (solcVersion.startsWith('0.4.')) {
             return new SolcWrapperV04(solcVersion, this._opts);
         }

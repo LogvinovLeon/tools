@@ -38,6 +38,9 @@ import { fsWrapper } from './utils/fs_wrapper';
 import { utils } from './utils/utils';
 
 import { ContractContentsByPath, SolcWrapper } from './solc_wrapper';
+import { SolcWrapperV01 } from './solc_wrapper_v01';
+import { SolcWrapperV02 } from './solc_wrapper_v02';
+import { SolcWrapperV03 } from './solc_wrapper_v03';
 import { SolcWrapperV04 } from './solc_wrapper_v04';
 import { SolcWrapperV05 } from './solc_wrapper_v05';
 import { SolcWrapperV06 } from './solc_wrapper_v06';
@@ -362,7 +365,8 @@ export class Compiler {
                             continue;
                         }
                         const { contractName } = contractData;
-                        const compiledContract = compilationResult.output.contracts[contractPath][contractName];
+                        const compiledContract = (compilationResult.output.contracts[contractPath] ||
+                            compilationResult.output.contracts[''])[contractName];
                         if (compiledContract === undefined) {
                             throw new Error(
                                 `Contract ${contractName} not found in ${contractPath}. Please make sure your contract has the same name as it's file name`,
@@ -411,6 +415,15 @@ export class Compiler {
     }
 
     private _createSolcInstance(solcVersion: string): SolcWrapper {
+        if (solcVersion.startsWith('0.1.')) {
+            return new SolcWrapperV01(solcVersion, this._opts);
+        }
+        if (solcVersion.startsWith('0.2.')) {
+            return new SolcWrapperV02(solcVersion, this._opts);
+        }
+        if (solcVersion.startsWith('0.3.')) {
+            return new SolcWrapperV03(solcVersion, this._opts);
+        }
         if (solcVersion.startsWith('0.4.')) {
             return new SolcWrapperV04(solcVersion, this._opts);
         }
@@ -435,10 +448,12 @@ export class Compiler {
         compilerInput: StandardInput,
         compilerOutput: StandardOutput,
     ): Promise<void> {
-        for (const contractPath of Object.keys(compilerOutput.contracts)) {
+        if (compilerOutput.sources[''] === undefined) {
+        for (const contractPath of Object.keys(compilerOutput.sources)) {
             const contractName = path.basename(contractPath, constants.SOLIDITY_FILE_EXTENSION);
-            const compiledContract = compilerOutput.contracts[contractPath][contractName];
-            // console.log(singleCompilerOutput);
+            const compiledContract = (compilerOutput.contracts[contractPath] || compilerOutput.contracts[''])[
+                contractName
+            ];
             const contractVersion: Partial<ContractVersionData> = {
                 compilerOutput: compiledContract,
                 compiler: {
@@ -459,6 +474,31 @@ export class Compiler {
             await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
             logUtils.warn(`${artefactName} artifact saved!`);
         }
+    } else {
+        // Solidity version 1 only supports single source compilation and therefore the structure is different
+        const contractName = contractFileName;
+        const compiledContract = compilerOutput.contracts[''][
+            contractName
+        ];
+        const contractVersion: Partial<ContractVersionData> = {
+            compilerOutput: compiledContract,
+            compiler: {
+                name: 'solc',
+                version: solcVersion,
+                settings: compilerInput.settings,
+            },
+        };
+        const newArtifact = {
+            schemaVersion: constants.LATEST_ARTIFACT_VERSION,
+            contractName,
+            ...contractVersion,
+            chains: {},
+        };
+        const artifactString = utils.stringifyWithFormatting(newArtifact);
+        const artefactName = `${contractFileName}-${contractName}`;
+        const currentArtifactPath = `${this._artifactsDir}/${artefactName}.json`;
+        await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
+        logUtils.warn(`${artefactName} artifact saved!`);
     }
 }
 
