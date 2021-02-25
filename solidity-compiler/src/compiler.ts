@@ -449,11 +449,35 @@ export class Compiler {
         compilerOutput: StandardOutput,
     ): Promise<void> {
         if (compilerOutput.sources[''] === undefined) {
-        for (const contractPath of Object.keys(compilerOutput.sources)) {
-            const contractName = path.basename(contractPath, constants.SOLIDITY_FILE_EXTENSION);
-            const compiledContract = (compilerOutput.contracts[contractPath] || compilerOutput.contracts[''])[
-                contractName
-            ];
+            for (const contractPath of Object.keys(compilerOutput.sources)) {
+                const contractName = path.basename(contractPath, constants.SOLIDITY_FILE_EXTENSION);
+                const compiledContract = (compilerOutput.contracts[contractPath] || compilerOutput.contracts[''])[
+                    contractName
+                ];
+                const contractVersion: Partial<ContractVersionData> = {
+                    compilerOutput: compiledContract,
+                    compiler: {
+                        name: 'solc',
+                        version: solcVersion,
+                        settings: compilerInput.settings,
+                    },
+                };
+                const newArtifact = {
+                    schemaVersion: constants.LATEST_ARTIFACT_VERSION,
+                    contractName,
+                    ...contractVersion,
+                    chains: {},
+                };
+                const artifactString = utils.stringifyWithFormatting(newArtifact);
+                const artefactName = `${contractFileName}-${contractName}`;
+                const currentArtifactPath = `${this._artifactsDir}/${artefactName}.json`;
+                await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
+                logUtils.warn(`${artefactName} artifact saved!`);
+            }
+        } else {
+            // Solidity version 1 only supports single source compilation and therefore the structure is different
+            const contractName = contractFileName;
+            const compiledContract = compilerOutput.contracts[''][contractName];
             const contractVersion: Partial<ContractVersionData> = {
                 compilerOutput: compiledContract,
                 compiler: {
@@ -474,32 +498,5 @@ export class Compiler {
             await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
             logUtils.warn(`${artefactName} artifact saved!`);
         }
-    } else {
-        // Solidity version 1 only supports single source compilation and therefore the structure is different
-        const contractName = contractFileName;
-        const compiledContract = compilerOutput.contracts[''][
-            contractName
-        ];
-        const contractVersion: Partial<ContractVersionData> = {
-            compilerOutput: compiledContract,
-            compiler: {
-                name: 'solc',
-                version: solcVersion,
-                settings: compilerInput.settings,
-            },
-        };
-        const newArtifact = {
-            schemaVersion: constants.LATEST_ARTIFACT_VERSION,
-            contractName,
-            ...contractVersion,
-            chains: {},
-        };
-        const artifactString = utils.stringifyWithFormatting(newArtifact);
-        const artefactName = `${contractFileName}-${contractName}`;
-        const currentArtifactPath = `${this._artifactsDir}/${artefactName}.json`;
-        await fsWrapper.writeFileAsync(currentArtifactPath, artifactString);
-        logUtils.warn(`${artefactName} artifact saved!`);
     }
 }
-
-// tslint:disable: max-file-line-count
