@@ -523,7 +523,7 @@ export function getDependencyNameToPackagePath(
  * Extract the solidity version (e.g., '0.5.9') from a solc version (e.g., `0.5.9+commit.34d3134f`).
  */
 export function getSolidityVersionFromSolcVersion(solcVersion: string): string {
-    const m = RegExp(`(${semVer}${nightly})${commit}`).exec(solcVersion);
+    const m = RegExp(`(${semVer}${nightly})(${commit})?`).exec(solcVersion);
     if (!m) {
         throw new Error(`Unable to parse solc version string "${solcVersion}"`);
     }
@@ -534,7 +534,7 @@ export function getSolidityVersionFromSolcVersion(solcVersion: string): string {
  * Strips any extra characters before and after the version + commit hash of a solc version string.
  */
 export function normalizeSolcVersion(fullSolcVersion: string): string {
-    const m = RegExp(`(${semVer}${nightly})${commit}`).exec(fullSolcVersion);
+    const m = RegExp(`(${semVer}${nightly})(${commit})?`).exec(fullSolcVersion);
     if (!m) {
         throw new Error(`Unable to parse solc version string "${fullSolcVersion}"`);
     }

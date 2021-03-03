@@ -456,6 +456,7 @@ export class Compiler {
                 ];
                 const contractVersion: Partial<ContractVersionData> = {
                     compilerOutput: compiledContract,
+                    sources: compilerOutput.sources,
                     compiler: {
                         name: 'solc',
                         version: solcVersion,
@@ -480,6 +481,7 @@ export class Compiler {
             const compiledContract = compilerOutput.contracts[''][contractName];
             const contractVersion: Partial<ContractVersionData> = {
                 compilerOutput: compiledContract,
+                sources: compilerOutput.sources,
                 compiler: {
                     name: 'solc',
                     version: solcVersion,
