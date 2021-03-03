@@ -422,9 +422,12 @@ export async function getSolcJSAsync(solidityVersion: string, isOfflineMode: boo
     if (fullSolcVersion === undefined) {
         const nightlyBuild = solcJSVersionList.builds.find(build => build.longVersion.startsWith(solidityVersion));
         if (nightlyBuild === undefined) {
-            throw new Error(`${solidityVersion} is not a known compiler version`);
+            console.warn(`${solidityVersion} is not a known compiler version`);
+            const shortSolidityVersion = normalizeSolcVersion(solidityVersion);
+            return getSolcJSAsync(shortSolidityVersion, isOfflineMode);
+        } else {
+            fullSolcVersion = nightlyBuild.path;
         }
-        fullSolcVersion = nightlyBuild.path;
     }
     if (solcJSCache[fullSolcVersion]) {
         return solcJSCache[fullSolcVersion];
@@ -534,11 +537,11 @@ export function getSolidityVersionFromSolcVersion(solcVersion: string): string {
  * Strips any extra characters before and after the version + commit hash of a solc version string.
  */
 export function normalizeSolcVersion(fullSolcVersion: string): string {
-    const m = RegExp(`(${semVer}${nightly})(${commit})?`).exec(fullSolcVersion);
+    const m = RegExp(`(${semVer})(${nightly})(${commit})?`).exec(fullSolcVersion);
     if (!m) {
         throw new Error(`Unable to parse solc version string "${fullSolcVersion}"`);
     }
-    return m[0];
+    return m[1];
 }
 
 /**
